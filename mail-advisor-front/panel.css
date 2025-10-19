@@ -1,0 +1,69 @@
+/* 상단 고정 패널 */
+.nm-panel {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 2147483647;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #111;
+  background: #f6f7f9;
+  border-bottom: 1px solid #dcdfe4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* 상단 바 */
+.nm-panel__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 12px;
+  background: #fff;
+  border-bottom: 1px solid #e7eaf0;
+}
+
+.nm-panel__title { font-weight: 600; font-size: 14px; }
+.nm-panel__actions { display: flex; gap: 8px; align-items: center; }
+
+/* 버튼 */
+.nm-btn,
+.nm-panel__close {
+  border: 1px solid #d0d7de;
+  background: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.nm-btn { padding: 6px 10px; }
+.nm-panel__close { padding: 4px 8px; }
+
+.nm-btn:hover,
+.nm-panel__close:hover { background: #f0f2f5; }
+.nm-btn.loading { opacity: 0.6; pointer-events: none; }
+
+/* 본문 영역 */
+.nm-panel__body {
+  max-height: 160px;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #f6f7f9;
+}
+.nm-panel__mirror {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* 푸터/상태 */
+.nm-panel__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 6px 12px;
+  background: #fff;
+  border-top: 1px solid #e7eaf0;
+}
+.nm-status { font-size: 12px; color: #57606a; }
+.nm-status.ok { color: #18794e; }
+.nm-status.err { color: #b42318; }
