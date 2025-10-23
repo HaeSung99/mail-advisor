@@ -1,69 +1,256 @@
-/* 상단 고정 패널 */
 .nm-panel {
   position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 2147483647;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: #111;
-  background: #f6f7f9;
-  border-bottom: 1px solid #dcdfe4;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  top: 20px;
+  right: 20px;
+  width: 400px;
+  max-height: 80vh;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-y: auto;
 }
 
-/* 상단 바 */
-.nm-panel__bar {
+.nm-panel__header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  height: 44px;
-  padding: 0 12px;
-  background: #fff;
-  border-bottom: 1px solid #e7eaf0;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-.nm-panel__title { font-weight: 600; font-size: 14px; }
-.nm-panel__actions { display: flex; gap: 8px; align-items: center; }
+.nm-panel__title {
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  font-size: 14px;
+}
 
-/* 버튼 */
-.nm-btn,
 .nm-panel__close {
-  border: 1px solid #d0d7de;
-  background: #fff;
+  background: none;
+  border: none;
+  font-size: 18px;
   cursor: pointer;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.nm-btn { padding: 6px 10px; }
-.nm-panel__close { padding: 4px 8px; }
-
-.nm-btn:hover,
-.nm-panel__close:hover { background: #f0f2f5; }
-.nm-btn.loading { opacity: 0.6; pointer-events: none; }
-
-/* 본문 영역 */
-.nm-panel__body {
-  max-height: 160px;
-  overflow: auto;
-  padding: 10px 12px;
-  background: #f6f7f9;
-}
-.nm-panel__mirror {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-/* 푸터/상태 */
-.nm-panel__footer {
+  color: #666;
+  padding: 0;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 6px 12px;
-  background: #fff;
-  border-top: 1px solid #e7eaf0;
+  justify-content: center;
 }
-.nm-status { font-size: 12px; color: #57606a; }
-.nm-status.ok { color: #18794e; }
-.nm-status.err { color: #b42318; }
+
+.nm-panel__close:hover {
+  color: #333;
+  background: #e9ecef;
+  border-radius: 4px;
+}
+
+.nm-panel__content {
+  padding: 16px;
+}
+
+.nm-panel__section {
+  margin-bottom: 16px;
+}
+
+.nm-panel__section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nm-panel__input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.nm-panel__input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.nm-panel__input select {
+  background: white;
+  cursor: pointer;
+}
+
+.nm-panel__input select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+/* 직접 입력 옵션 스타일 */
+.custom-option {
+  background: #f8f9fa !important;
+  color: #007bff !important;
+  font-weight: 500 !important;
+}
+
+.custom-option:hover {
+  background: #e3f2fd !important;
+}
+
+/* 직접 입력 필드 스타일 */
+.nm-panel__custom-input {
+  border: 2px solid #007bff;
+  background: #f8f9fa;
+  font-weight: 500;
+}
+
+.nm-panel__custom-input:focus {
+  border-color: #0056b3;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+}
+
+/* 문자 카운터 스타일 */
+.nm-panel__char-count {
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.nm-panel__char-count.warning {
+  color: #ff9800;
+}
+
+.nm-panel__char-count.danger {
+  color: #f44336;
+}
+
+/* 응답 영역 스타일 */
+.nm-panel__response {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.nm-panel__advice-content {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.nm-panel__token-info {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1976d2;
+  text-align: center;
+}
+
+/* 적용 버튼 스타일 */
+#nm-apply {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+#nm-apply:hover {
+  background: #218838;
+}
+
+#nm-apply:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.nm-panel__textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+#nm-mirror {
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  background: #fafafa;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.nm-panel__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+#nm-send {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+}
+
+#nm-send:hover {
+  background: #0056b3;
+}
+
+#nm-send.loading {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+#nm-status {
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
+}
+
+#nm-status.ok {
+  color: #28a745;
+}
+
+#nm-status.err {
+  color: #dc3545;
+}
