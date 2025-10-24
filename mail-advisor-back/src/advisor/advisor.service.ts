@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import OpenAI from 'openai';
+import { UsersRepository } from '../auth/user.repository';
 
 @Injectable()
 export class AdvisorService {
-  private client = new OpenAI(); // 환경변수 자동 사용
+  private client = new OpenAI({ // apiKey 등록안하면 자동으로 OPENAI_API_KEY 를 ENV에서 불러와서 사용
+    apiKey: process.env.OPENAI_API_KEY
+  });
+
+  constructor(private readonly usersRepo: UsersRepository) {}
 
   // (선택) 흔한 누설 방지용 가벼운 클린업: 앞뒤 ``` 코드펜스/따옴표/레이블 제거
   private sanitize(output: string): string {
@@ -22,7 +27,17 @@ export class AdvisorService {
   }
 
 
-  async advise(body: any) {
+  async advise(body: any, username: string) {
+    // 사용자 토큰 확인
+    const user = await this.usersRepo.findByUsername(username);
+    if (!user) {
+      throw new BadRequestException('사용자를 찾을 수 없습니다.');
+    }
+
+    if (user.tokenAmount <= 0) {
+      throw new BadRequestException('토큰이 부족합니다. 토큰을 충전해주세요.');
+    }
+
     const instruction = `
         너는 사용자가 작성한 이메일 초안을 기반으로, 글의 목적을 가장 효과적으로 달성하도록 발전시키는 **적극적인 이메일 파트너**다.  
         단순히 문법을 고치거나 말투를 정리하는 수준이 아니라, 사용자의 의도와 목표를 명확히 드러내며  
@@ -94,7 +109,7 @@ export class AdvisorService {
     const client_text = body.content ?? ''; // 원문 전체
 
     const res = await this.client.responses.create({
-      model: 'gpt-5',
+      model: 'gpt-5-nano',
       instructions: instruction, // 규칙은 여기, 원문은 input으로만 보냄
       input: client_text,        // "본문만 내놔"를 보장하려면 원문은 input 단독으로
       // temperature/top_p는 기본값 사용(원하면 낮게 조절)
@@ -110,11 +125,18 @@ export class AdvisorService {
     const raw = res.output_text ?? '';
     const cleaned = this.sanitize(raw); // 선택적 후처리
 
+    // 사용된 토큰 수 확인 및 차감
+    const usedTokens = res.usage?.total_tokens ?? 0;
+    if (usedTokens > 0) {
+      await this.usersRepo.decreaseTokenAmount(username, usedTokens);
+    }
+
     console.log(res)
 
     return {
-      output: cleaned, // AI가 이미 올바른 형태로 출력
-      token: res.usage?.total_tokens ?? '알수없음',
+      output: cleaned, // output
+      token: usedTokens, // 사용한 토큰
+      remainingTokens: Math.max(0, user.tokenAmount - usedTokens) // 남은 토큰 (전체 토큰 - 사용한 토큰)
     };
   }
 }

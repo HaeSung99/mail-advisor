@@ -1,0 +1,46 @@
+
+services:
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: mail-advisor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - mail-advisor-network
+    healthcheck: # 주기적인 헬스체크
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # NestJS 백엔드 애플리케이션
+  backend:
+    build: .
+    container_name: mail-advisor-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on: # db 실행 후 실행
+      mysql:
+        condition: service_healthy
+    networks:
+      - mail-advisor-network
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  mysql_data:
+
+networks:
+  mail-advisor-network:
+    driver: bridge

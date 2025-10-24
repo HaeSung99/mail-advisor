@@ -11,6 +11,7 @@ const PRIMARY_SELECTOR = '[aria-label="본문 내용"]';
 const TEXT_MODE = 'text';                       // 'text' | 'html' (html은 리치텍스트 그대로 전송)
 const POLL_MS = 120;
 const ADVISE_URL = 'http://localhost:3000/advisor'; // 로컬 백엔드 수신 URL
+const AUTH_URL = 'http://localhost:3000/auth'; // 인증 API URL
 
 /* ===== 상태 ===== */
 let panelRoot = null, shadowHost = null, mirrorEl = null, statusEl = null, sendBtn = null, applyBtn = null;
@@ -19,6 +20,109 @@ let isOpen = false, editorEl = null, pollId = null, mo = null;
 let currentAdvice = ''; // 현재 조언 내용 저장
 let originalContent = ''; // 적용 전 원문 저장
 let isApplied = false; // 적용 상태 추적
+
+// 인증 상태 관리
+let accessToken = localStorage.getItem('accessToken') || '';
+let refreshToken = localStorage.getItem('refreshToken') || '';
+let isAuthenticated = false;
+
+/* ===== 인증 관련 함수 ===== */
+async function checkAuth() {
+  if (!accessToken) {
+    showLoginForm();
+    return false;
+  }
+  
+  // 토큰 유효성 검사 (간단한 체크)
+  try {
+    const response = await fetch(`${AUTH_URL}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      accessToken = data.accessToken;
+      localStorage.setItem('accessToken', accessToken);
+      isAuthenticated = true;
+      return true;
+    }
+  } catch (error) {
+    console.error('인증 확인 실패:', error);
+  }
+  
+  showLoginForm();
+  return false;
+}
+
+function showLoginForm() {
+  if (!panelRoot) return;
+  
+  // 인증 폼 표시
+  const authForm = panelRoot.querySelector('#nm-auth-form');
+  if (authForm) {
+    authForm.style.display = 'block';
+  }
+}
+
+async function login(username, password) {
+  try {
+    const response = await fetch(`${AUTH_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      accessToken = data.accessToken;
+      refreshToken = data.refreshToken;
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      isAuthenticated = true;
+      
+      // 인증 폼 숨기기
+      const authForm = panelRoot.querySelector('#nm-auth-form');
+      if (authForm) {
+        authForm.style.display = 'none';
+      }
+      
+      // 메인 컨텐츠 표시
+      const mainContent = panelRoot.querySelector('#nm-main-content');
+      if (mainContent) {
+        mainContent.style.display = 'block';
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('로그인 실패:', error);
+  }
+  return false;
+}
+
+async function signup(username, password) {
+  try {
+    const response = await fetch(`${AUTH_URL}/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      // 회원가입 성공 시 자동으로 로그인
+      return await login(username, password);
+    } else {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '회원가입 실패');
+    }
+  } catch (error) {
+    console.error('회원가입 실패:', error);
+    throw error;
+  }
+}
 
 /* ===== 패널 생성 ===== */
 async function ensurePanel() {
@@ -59,6 +163,108 @@ async function ensurePanel() {
   shadow.querySelector('.nm-panel__close')?.addEventListener('click', () => togglePanel(false)); // 닫기 버튼 클릭 시 패널 닫기
   sendBtn?.addEventListener('click', onSendClick); // 전송 버튼 클릭 시 전송 함수 실행
   applyBtn?.addEventListener('click', onApplyClick); // 적용 버튼 클릭 시 적용 함수 실행
+  
+  // 로그인 버튼 이벤트
+  const loginBtn = shadow.querySelector('#nm-login-btn');
+  loginBtn?.addEventListener('click', async () => {
+    const username = shadow.querySelector('#nm-username')?.value;
+    const password = shadow.querySelector('#nm-password')?.value;
+    const errorEl = shadow.querySelector('#nm-login-error');
+    
+    // 에러 메시지 숨기기
+    if (errorEl) errorEl.style.display = 'none';
+    
+    if (!username || !password) {
+      if (errorEl) {
+        errorEl.textContent = '사용자명과 비밀번호를 입력해주세요.';
+        errorEl.style.display = 'block';
+      }
+      return;
+    }
+    
+    try {
+      if (await login(username, password)) {
+        if (statusEl) {
+          statusEl.textContent = '로그인 성공!';
+          statusEl.classList.remove('err');
+          statusEl.classList.add('ok');
+        }
+        // 로그인 성공 시 메인 컨텐츠 표시
+        showMainContent();
+      } else {
+        if (errorEl) {
+          errorEl.textContent = '사용자명 또는 비밀번호가 올바르지 않습니다.';
+          errorEl.style.display = 'block';
+        }
+      }
+    } catch (error) {
+      if (errorEl) {
+        errorEl.textContent = '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+        errorEl.style.display = 'block';
+      }
+    }
+  });
+
+  // 회원가입 버튼 이벤트
+  const signupBtn = shadow.querySelector('#nm-signup-btn');
+  signupBtn?.addEventListener('click', async () => {
+    const username = shadow.querySelector('#nm-signup-username')?.value;
+    const password = shadow.querySelector('#nm-signup-password')?.value;
+    const confirmPassword = shadow.querySelector('#nm-signup-confirm')?.value;
+    const errorEl = shadow.querySelector('#nm-signup-error');
+    
+    // 에러 메시지 숨기기
+    if (errorEl) errorEl.style.display = 'none';
+    
+    if (!username || !password || !confirmPassword) {
+      if (errorEl) {
+        errorEl.textContent = '모든 필드를 입력해주세요.';
+        errorEl.style.display = 'block';
+      }
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      if (errorEl) {
+        errorEl.textContent = '비밀번호가 일치하지 않습니다.';
+        errorEl.style.display = 'block';
+      }
+      return;
+    }
+    
+    try {
+      if (await signup(username, password)) {
+        if (statusEl) {
+          statusEl.textContent = '회원가입 및 로그인 성공!';
+          statusEl.classList.remove('err');
+          statusEl.classList.add('ok');
+        }
+        // 회원가입 성공 시 메인 컨텐츠 표시
+        showMainContent();
+      }
+    } catch (error) {
+      if (errorEl) {
+        errorEl.textContent = error.message || '회원가입 실패';
+        errorEl.style.display = 'block';
+      }
+    }
+  });
+
+  // 폼 전환 이벤트
+  const showSignupBtn = shadow.querySelector('#nm-show-signup-btn');
+  const showLoginBtn = shadow.querySelector('#nm-show-login-btn');
+  const loginSection = shadow.querySelector('#nm-login-section');
+  const signupSection = shadow.querySelector('#nm-signup-section');
+  
+  showSignupBtn?.addEventListener('click', () => {
+    loginSection.style.display = 'none';
+    signupSection.style.display = 'block';
+  });
+  
+  showLoginBtn?.addEventListener('click', () => {
+    signupSection.style.display = 'none';
+    loginSection.style.display = 'block';
+  });
   
   // 직접 입력 옵션 토글 이벤트
   setupCustomInputToggles(shadow);
@@ -146,7 +352,26 @@ async function togglePanel(force) {
   const next = typeof force === 'boolean' ? force : !isOpen; // 강제 값이 있으면 그대로, 없으면 현재 상태 반전
   isOpen = next; // 패널 열림/닫힘 상태 업데이트
   panelRoot.style.display = isOpen ? 'block' : 'none'; // 패널 표시/숨김 처리
-  if (isOpen) start(); else stop(); // 패널이 열리면 모니터링 시작, 닫히면 정지
+  
+  if (isOpen) {
+    // 패널이 열릴 때 로그인 상태 확인
+    if (accessToken) {
+      // 이미 로그인된 상태면 메인 컨텐츠 표시
+      const authForm = panelRoot.querySelector('#nm-auth-form');
+      const mainContent = panelRoot.querySelector('#nm-main-content');
+      if (authForm) authForm.style.display = 'none';
+      if (mainContent) mainContent.style.display = 'block';
+    } else {
+      // 로그인되지 않은 상태면 로그인 폼 표시
+      const authForm = panelRoot.querySelector('#nm-auth-form');
+      const mainContent = panelRoot.querySelector('#nm-main-content');
+      if (authForm) authForm.style.display = 'block';
+      if (mainContent) mainContent.style.display = 'none';
+    }
+    start();
+  } else {
+    stop();
+  }
 }
 
 /* ===== 유틸 ===== */
@@ -245,6 +470,13 @@ function getUserInputData() {
 async function onSendClick() {
   if (!sendBtn || !statusEl) return;
 
+  // 인증 확인
+  if (!await checkAuth()) {
+    statusEl.textContent = '로그인이 필요합니다.';
+    statusEl.classList.add('err');
+    return;
+  }
+
   // 사용자 입력 데이터 수집
   const userInput = getUserInputData();
   
@@ -271,15 +503,42 @@ async function onSendClick() {
 
     const res = await fetch(ADVISE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
       body: JSON.stringify(payload)
     });
+    
+    if (res.status === 401) {
+      // 토큰 만료 시 refresh 시도
+      if (await refreshAccessToken()) {
+        // 토큰 갱신 후 재시도
+        const retryRes = await fetch(ADVISE_URL, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!retryRes.ok) throw new Error(`HTTP ${retryRes.status}`);
+        const result = await retryRes.json();
+        showResponse(result.output, result.token);
+        statusEl.textContent = '완료';
+        statusEl.classList.add('ok');
+        return;
+      } else {
+        throw new Error('인증 실패');
+      }
+    }
+    
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const result = await res.json();
     
     // 응답 표시
-    showResponse(result.output, result.token);
+    showResponse(result.output, result.token, result.remainingTokens);
     
     statusEl.textContent = '완료';
     statusEl.classList.add('ok');
@@ -291,8 +550,28 @@ async function onSendClick() {
   }
 }
 
+async function refreshAccessToken() {
+  try {
+    const response = await fetch(`${AUTH_URL}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      accessToken = data.accessToken;
+      localStorage.setItem('accessToken', accessToken);
+      return true;
+    }
+  } catch (error) {
+    console.error('토큰 갱신 실패:', error);
+  }
+  return false;
+}
+
 /* ===== 응답 표시 ===== */
-function showResponse(advice, tokenCount) {
+function showResponse(advice, tokenCount, remainingTokens) {
   if (!responseEl || !adviceContentEl || !tokenInfoEl) return;
   
   // 조언 내용 저장
@@ -304,7 +583,7 @@ function showResponse(advice, tokenCount) {
   
   // UI 업데이트
   adviceContentEl.textContent = advice;
-  tokenInfoEl.textContent = `${tokenCount} 토큰 사용`;
+  tokenInfoEl.textContent = `${tokenCount} 토큰 사용${remainingTokens ? ` (남은 토큰: ${remainingTokens})` : ''}`;
   
   // 응답 영역과 적용 버튼 표시
   responseEl.style.display = 'block';

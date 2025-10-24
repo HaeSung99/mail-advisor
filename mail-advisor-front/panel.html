@@ -4,118 +4,149 @@
     <button class="nm-panel__close">×</button>
   </div>
   <div class="nm-panel__content">
-    <div class="nm-panel__section" id="nm-mirror-section" style="display: none;">
-      <div class="nm-panel__section-title">본문 미러링</div>
-      <div id="nm-mirror">본문 내용이 여기에 표시됩니다...</div>
+    <!-- 로그인/회원가입 폼 (기본 표시) -->
+    <div class="nm-panel__section" id="nm-auth-form">
+      <div class="nm-panel__section-title">로그인 / 회원가입</div>
+      
+      <!-- 로그인 폼 -->
+      <div id="nm-login-section">
+        <input type="text" class="nm-panel__input" id="nm-username" placeholder="사용자명" style="margin-bottom: 8px;">
+        <input type="password" class="nm-panel__input" id="nm-password" placeholder="비밀번호" style="margin-bottom: 8px;">
+        <div id="nm-login-error" style="display: none; color: #dc3545; font-size: 12px; margin-bottom: 8px; padding: 4px 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;"></div>
+        <div style="display: flex; gap: 8px;">
+          <button id="nm-login-btn" style="flex: 1; padding: 8px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">로그인</button>
+          <button id="nm-show-signup-btn" style="flex: 1; padding: 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">회원가입</button>
+        </div>
+      </div>
+      
+      <!-- 회원가입 폼 -->
+      <div id="nm-signup-section" style="display: none;">
+        <input type="text" class="nm-panel__input" id="nm-signup-username" placeholder="사용자명" style="margin-bottom: 8px;">
+        <input type="password" class="nm-panel__input" id="nm-signup-password" placeholder="비밀번호" style="margin-bottom: 8px;">
+        <input type="password" class="nm-panel__input" id="nm-signup-confirm" placeholder="비밀번호 확인" style="margin-bottom: 8px;">
+        <div id="nm-signup-error" style="display: none; color: #dc3545; font-size: 12px; margin-bottom: 8px; padding: 4px 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;"></div>
+        <div style="display: flex; gap: 8px;">
+          <button id="nm-signup-btn" style="flex: 1; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">회원가입</button>
+          <button id="nm-show-login-btn" style="flex: 1; padding: 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">로그인</button>
+        </div>
+      </div>
     </div>
     
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">내 직책</div>
-      <select class="nm-panel__input" id="nm-my-position-type">
-        <option value="manager">매니저</option>
-        <option value="director">이사</option>
-        <option value="ceo">CEO</option>
-        <option value="team-lead">팀장</option>
-        <option value="senior">시니어</option>
-        <option value="junior">주니어</option>
-        <option value="intern">인턴</option>
-        <option value="custom" class="custom-option">✏️ 직접 입력</option>
-      </select>
-      <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-position-custom" placeholder="직책을 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
-      <div class="nm-panel__char-count" id="nm-my-position-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
-    </div>
-    
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">내 업무</div>
-      <select class="nm-panel__input" id="nm-my-job-type">
-        <option value="marketing">마케팅</option>
-        <option value="sales">영업</option>
-        <option value="hr">인사</option>
-        <option value="finance">재무</option>
-        <option value="it">IT/개발</option>
-        <option value="design">디자인</option>
-        <option value="content">콘텐츠</option>
-        <option value="customer-service">고객서비스</option>
-        <option value="custom" class="custom-option">✏️ 직접 입력</option>
-      </select>
-      <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-job-custom" placeholder="업무를 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
-      <div class="nm-panel__char-count" id="nm-my-job-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
-    </div>
-    
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">톤앤매너</div>
-      <select class="nm-panel__input" id="nm-tone-level-type">
-        <option value="formal">정중하고 전문적인</option>
-        <option value="friendly">친근하고 따뜻한</option>
-        <option value="casual">편안하고 자연스러운</option>
-        <option value="authoritative">권위적이고 확신있는</option>
-        <option value="persuasive">설득력 있는</option>
-        <option value="urgent">긴급하고 중요한</option>
-        <option value="custom" class="custom-option">✏️ 직접 입력</option>
-      </select>
-      <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-tone-level-custom" placeholder="톤앤매너를 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
-      <div class="nm-panel__char-count" id="nm-tone-level-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
-    </div>
-    
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">목표</div>
-      <select class="nm-panel__input" id="nm-my-goal-type">
-        <option value="proposal">제안/제안서</option>
-        <option value="follow-up">후속 조치</option>
-        <option value="meeting">회의 요청</option>
-        <option value="feedback">피드백 요청</option>
-        <option value="approval">승인 요청</option>
-        <option value="information">정보 공유</option>
-        <option value="apology">사과</option>
-        <option value="thanks">감사 인사</option>
-        <option value="custom" class="custom-option">✏️ 직접 입력</option>
-      </select>
-      <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-goal-custom" placeholder="목표를 직접 입력하세요 (최대 100자)" style="display: none; margin-top: 8px;">
-      <div class="nm-panel__char-count" id="nm-my-goal-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/100</div>
-    </div>
+    <!-- 로그인 후 표시되는 메인 컨텐츠 (기본 숨김) -->
+    <div id="nm-main-content" style="display: none;">
+      <div class="nm-panel__section" id="nm-mirror-section" style="display: none;">
+        <div class="nm-panel__section-title">본문 미러링</div>
+        <div id="nm-mirror">본문 내용이 여기에 표시됩니다...</div>
+      </div>
+      
+      <div class="nm-panel__section">
+        <div class="nm-panel__section-title">내 직책</div>
+        <select class="nm-panel__input" id="nm-my-position-type">
+          <option value="manager">매니저</option>
+          <option value="director">이사</option>
+          <option value="ceo">CEO</option>
+          <option value="team-lead">팀장</option>
+          <option value="senior">시니어</option>
+          <option value="junior">주니어</option>
+          <option value="intern">인턴</option>
+          <option value="custom" class="custom-option">✏️ 직접 입력</option>
+        </select>
+        <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-position-custom" placeholder="직책을 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
+        <div class="nm-panel__char-count" id="nm-my-position-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
+      </div>
+      
+      <div class="nm-panel__section">
+        <div class="nm-panel__section-title">내 업무</div>
+        <select class="nm-panel__input" id="nm-my-job-type">
+          <option value="marketing">마케팅</option>
+          <option value="sales">영업</option>
+          <option value="hr">인사</option>
+          <option value="finance">재무</option>
+          <option value="it">IT/개발</option>
+          <option value="design">디자인</option>
+          <option value="content">콘텐츠</option>
+          <option value="customer-service">고객서비스</option>
+          <option value="custom" class="custom-option">✏️ 직접 입력</option>
+        </select>
+        <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-job-custom" placeholder="업무를 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
+        <div class="nm-panel__char-count" id="nm-my-job-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
+      </div>
+      
+      <div class="nm-panel__section">
+        <div class="nm-panel__section-title">톤앤매너</div>
+        <select class="nm-panel__input" id="nm-tone-level-type">
+          <option value="formal">정중하고 전문적인</option>
+          <option value="friendly">친근하고 따뜻한</option>
+          <option value="casual">편안하고 자연스러운</option>
+          <option value="authoritative">권위적이고 확신있는</option>
+          <option value="persuasive">설득력 있는</option>
+          <option value="urgent">긴급하고 중요한</option>
+          <option value="custom" class="custom-option">✏️ 직접 입력</option>
+        </select>
+        <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-tone-level-custom" placeholder="톤앤매너를 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
+        <div class="nm-panel__char-count" id="nm-tone-level-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
+      </div>
+      
+      <div class="nm-panel__section">
+        <div class="nm-panel__section-title">목표</div>
+        <select class="nm-panel__input" id="nm-my-goal-type">
+          <option value="proposal">제안/제안서</option>
+          <option value="follow-up">후속 조치</option>
+          <option value="meeting">회의 요청</option>
+          <option value="feedback">피드백 요청</option>
+          <option value="approval">승인 요청</option>
+          <option value="information">정보 공유</option>
+          <option value="apology">사과</option>
+          <option value="thanks">감사 인사</option>
+          <option value="custom" class="custom-option">✏️ 직접 입력</option>
+        </select>
+        <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-my-goal-custom" placeholder="목표를 직접 입력하세요 (최대 100자)" style="display: none; margin-top: 8px;">
+        <div class="nm-panel__char-count" id="nm-my-goal-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/100</div>
+      </div>
 
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">길이</div>
-      <select class="nm-panel__input" id="nm-length">
-        <option value="similar">본문과 비슷하게</option>
-        <option value="short">짧게</option>
-        <option value="long">길게</option>
-        <option value="optimized" selected>최적화 (추천)</option>
-      </select>
-    </div>
-    
-    <div class="nm-panel__section">
-      <div class="nm-panel__section-title">대상</div>
-      <select class="nm-panel__input" id="nm-audience-type">
-        <option value="customer">고객</option>
-        <option value="colleague">동료</option>
-        <option value="boss">상사</option>
-        <option value="subordinate">부하직원</option>
-        <option value="partner">파트너</option>
-        <option value="vendor">협력업체</option>
-        <option value="investor">투자자</option>
-        <option value="media">언론</option>
-        <option value="custom" class="custom-option">✏️ 직접 입력</option>
-      </select>
-      <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-audience-custom" placeholder="대상을 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
-      <div class="nm-panel__char-count" id="nm-audience-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
-    </div>
-    
-    <div class="nm-panel__response" id="nm-response" style="display: none;">
       <div class="nm-panel__section">
-        <div class="nm-panel__section-title">AI 조언</div>
-        <div class="nm-panel__advice-content" id="nm-advice-content">조언이 여기에 표시됩니다...</div>
+        <div class="nm-panel__section-title">길이</div>
+        <select class="nm-panel__input" id="nm-length">
+          <option value="similar">본문과 비슷하게</option>
+          <option value="short">짧게</option>
+          <option value="long">길게</option>
+          <option value="optimized" selected>최적화 (추천)</option>
+        </select>
       </div>
+      
       <div class="nm-panel__section">
-        <div class="nm-panel__section-title">토큰 사용량</div>
-        <div class="nm-panel__token-info" id="nm-token-info">0 토큰 사용</div>
+        <div class="nm-panel__section-title">대상</div>
+        <select class="nm-panel__input" id="nm-audience-type">
+          <option value="customer">고객</option>
+          <option value="colleague">동료</option>
+          <option value="boss">상사</option>
+          <option value="subordinate">부하직원</option>
+          <option value="partner">파트너</option>
+          <option value="vendor">협력업체</option>
+          <option value="investor">투자자</option>
+          <option value="media">언론</option>
+          <option value="custom" class="custom-option">✏️ 직접 입력</option>
+        </select>
+        <input type="text" class="nm-panel__input nm-panel__custom-input" id="nm-audience-custom" placeholder="대상을 직접 입력하세요 (최대 50자)" style="display: none; margin-top: 8px;">
+        <div class="nm-panel__char-count" id="nm-audience-count" style="display: none; margin-top: 4px; font-size: 11px; color: #666; text-align: right;">0/50</div>
       </div>
-    </div>
-    
-    <div class="nm-panel__actions">
-      <button id="nm-send">전송</button>
-      <button id="nm-apply" style="display: none;">적용</button>
-      <span id="nm-status"></span>
+      
+      <div class="nm-panel__response" id="nm-response" style="display: none;">
+        <div class="nm-panel__section">
+          <div class="nm-panel__section-title">AI 조언</div>
+          <div class="nm-panel__advice-content" id="nm-advice-content">조언이 여기에 표시됩니다...</div>
+        </div>
+        <div class="nm-panel__section">
+          <div class="nm-panel__section-title">토큰 사용량</div>
+          <div class="nm-panel__token-info" id="nm-token-info">0 토큰 사용</div>
+        </div>
+      </div>
+      
+      <div class="nm-panel__actions">
+        <button id="nm-send">전송</button>
+        <button id="nm-apply" style="display: none;">적용</button>
+        <span id="nm-status"></span>
+      </div>
     </div>
   </div>
 </div>

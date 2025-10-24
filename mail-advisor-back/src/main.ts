@@ -22,5 +22,6 @@ async function bootstrap() {
   // });
 
   await app.listen(process.env.PORT || 3000);
+  console.log(`서버 실행중 Port : ${process.env.PORT || 3000}`);
 }
 bootstrap();
