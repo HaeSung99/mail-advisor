@@ -11,9 +11,11 @@ import { User } from './auth/user.entity';
 import { UsersRepository } from './auth/user.repository';
 import { JwtService } from './auth/jwt.service';
 import { JwtModule } from '@nestjs/jwt';
+import { PaymentModule } from './payment/payment.module';
+import { Payment } from './payment/payment.entity';
 
 @Module({
-  imports: [ConfigModule.forRoot({isGlobal : true}), AdvisorModule, AuthModule,
+  imports: [ConfigModule.forRoot({isGlobal : true}), AdvisorModule, AuthModule, PaymentModule,
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,
@@ -24,7 +26,7 @@ import { JwtModule } from '@nestjs/jwt';
       autoLoadEntities: true,
       synchronize: process.env.NODE_ENV !== 'production'
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Payment]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || (() => {
         throw new Error('JWT_SECRET environment variable is required');

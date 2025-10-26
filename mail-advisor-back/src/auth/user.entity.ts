@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Payment } from '../payment/payment.entity';
 
 @Entity()
 export class User {
@@ -16,4 +17,7 @@ export class User {
 
   @Column({ type: 'text', nullable: true })
   refreshToken: string | null;
+
+  @OneToMany(() => Payment, payment => payment.user)
+  payments: Payment[];
 }

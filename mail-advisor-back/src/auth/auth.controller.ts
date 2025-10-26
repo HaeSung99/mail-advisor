@@ -26,4 +26,9 @@ export class AuthController {
   refresh(@Body() body: { refreshToken: string }) {
     return this.authservice.refreshToken(body.refreshToken);
   }
+
+  @Post('token-balance')
+  getTokenBalance(@Body() body: { username: string }) {
+    return this.authservice.getTokenAmount(body.username);
+  }
 }

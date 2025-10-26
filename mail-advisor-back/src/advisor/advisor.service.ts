@@ -127,8 +127,13 @@ export class AdvisorService {
 
     // 사용된 토큰 수 확인 및 차감
     const usedTokens = res.usage?.total_tokens ?? 0;
+    let remainingTokens = user.tokenAmount;
+    
     if (usedTokens > 0) {
       await this.usersRepo.decreaseTokenAmount(username, usedTokens);
+      // DB에서 최신 토큰 잔액 조회
+      const updatedUser = await this.usersRepo.findByUsername(username);
+      remainingTokens = updatedUser?.tokenAmount ?? 0;
     }
 
     console.log(res)
@@ -136,7 +141,7 @@ export class AdvisorService {
     return {
       output: cleaned, // output
       token: usedTokens, // 사용한 토큰
-      remainingTokens: Math.max(0, user.tokenAmount - usedTokens) // 남은 토큰 (전체 토큰 - 사용한 토큰)
+      remainingTokens: remainingTokens // 남은 토큰 (DB에서 조회한 최신 값)
     };
   }
 }

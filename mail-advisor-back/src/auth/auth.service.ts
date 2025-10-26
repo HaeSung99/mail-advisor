@@ -79,4 +79,13 @@ export class AuthService {
     
     return { accessToken: newAccessToken };
   }
+
+  // 토큰 잔액 조회
+  async getTokenAmount(username: string) {
+    const user = await this.usersRepo.findByUsername(username);
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+    }
+    return { tokenAmount: user.tokenAmount };
+  }
 }

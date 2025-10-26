@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Naver Mail Top Panel Mirror",
+  "name": "메일 어드바이저",
   "version": "1.0.0",
-  "description": "네이버 메일 본문 입력 내용을 최상단 패널에 실시간 미러링",
+  "description": "AI 기반 메일 작성 어시스턴트 - 네이버 메일을 위한 전문적인 메일 작성 도우미",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["https://mail.naver.com/*", "http://localhost:3000/*"],
   "action": {

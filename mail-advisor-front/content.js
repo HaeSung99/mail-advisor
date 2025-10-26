@@ -3,7 +3,7 @@
  * - 결정 셀렉터: iframe 내부의 [aria-label="본문 내용"]
  * - 간단 폴링(120ms) + 가벼운 재바인딩
  * - 전송 시 "패널에 보이는 내용 그대로" POST 전송
- */
+**/
 
 /* ===== 설정 ===== */
 const IFRAME_HINT = 'iframe[tabindex="5"]';     // 네이버 편집 iframe 힌트
@@ -12,19 +12,22 @@ const TEXT_MODE = 'text';                       // 'text' | 'html' (html은 리�
 const POLL_MS = 120;
 const ADVISE_URL = 'http://localhost:3000/advisor'; // 로컬 백엔드 수신 URL
 const AUTH_URL = 'http://localhost:3000/auth'; // 인증 API URL
+const PAYMENT_URL = 'http://localhost:3000/payment'; // 결제 API URL
+const TOSS_CLIENT_KEY = 'test_ck_pP2YxJ4K87EvDLxvjwe9VRGZwXLO'; // 토스페이먼츠 테스트 클라이언트 키
 
 /* ===== 상태 ===== */
-let panelRoot = null, shadowHost = null, mirrorEl = null, statusEl = null, sendBtn = null, applyBtn = null;
+let panelRoot = null, shadowHost = null, shadow = null, mirrorEl = null, statusEl = null, sendBtn = null, applyBtn = null;
 let responseEl = null, adviceContentEl = null, tokenInfoEl = null;
 let isOpen = false, editorEl = null, pollId = null, mo = null;
 let currentAdvice = ''; // 현재 조언 내용 저장
 let originalContent = ''; // 적용 전 원문 저장
 let isApplied = false; // 적용 상태 추적
 
-// 인증 상태 관리
+// 인증 상태 관리 - 로컬 스토리지에서 읽어오기
 let accessToken = localStorage.getItem('accessToken') || '';
 let refreshToken = localStorage.getItem('refreshToken') || '';
 let isAuthenticated = false;
+let tokenBalance = 0; // 보유 토큰
 
 /* ===== 인증 관련 함수 ===== */
 async function checkAuth() {
@@ -78,21 +81,18 @@ async function login(username, password) {
       const data = await response.json();
       accessToken = data.accessToken;
       refreshToken = data.refreshToken;
+      tokenBalance = data.tokenAmount || 0;
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
       isAuthenticated = true;
       
+      updateTokenBalance();
+      
       // 인증 폼 숨기기
       const authForm = panelRoot.querySelector('#nm-auth-form');
-      if (authForm) {
-        authForm.style.display = 'none';
-      }
-      
-      // 메인 컨텐츠 표시
       const mainContent = panelRoot.querySelector('#nm-main-content');
-      if (mainContent) {
-        mainContent.style.display = 'block';
-      }
+      if (authForm) authForm.style.display = 'none';
+      if (mainContent) mainContent.style.display = 'block';
       
       return true;
     }
@@ -133,7 +133,7 @@ async function ensurePanel() {
   // 페이지 최상위에 호스트 요소 추가
   document.documentElement.appendChild(shadowHost);
   // Shadow DOM 생성 (open 모드로 외부에서 접근 가능)
-  const shadow = shadowHost.attachShadow({ mode: 'open' });
+  shadow = shadowHost.attachShadow({ mode: 'open' });
 
   // 패널 HTML 파일을 비동기로 가져와서 파싱
   const html = await fetch(chrome.runtime.getURL('panel.html')).then(r => r.text());
@@ -152,7 +152,7 @@ async function ensurePanel() {
   // 패널 내부 요소들 참조 저장
   panelRoot = shadow.querySelector('.nm-panel'); // 메인 패널 컨테이너
   mirrorEl  = shadow.querySelector('#nm-mirror'); // 본문 내용 미러링할 요소
-  statusEl  = shadow.querySelector('#nm-status'); // 상태 메시지 표시 요소
+  statusEl  = shadow.querySelector('.nm-status'); // 상태 메시지 표시 요소
   sendBtn   = shadow.querySelector('#nm-send'); // 전송 버튼
   applyBtn  = shadow.querySelector('#nm-apply'); // 적용 버튼
   responseEl = shadow.querySelector('#nm-response'); // 응답 영역
@@ -190,7 +190,10 @@ async function ensurePanel() {
           statusEl.classList.add('ok');
         }
         // 로그인 성공 시 메인 컨텐츠 표시
-        showMainContent();
+        const authForm = panelRoot.querySelector('#nm-auth-form');
+        const mainContent = panelRoot.querySelector('#nm-main-content');
+        if (authForm) authForm.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
       } else {
         if (errorEl) {
           errorEl.textContent = '사용자명 또는 비밀번호가 올바르지 않습니다.';
@@ -240,7 +243,10 @@ async function ensurePanel() {
           statusEl.classList.add('ok');
         }
         // 회원가입 성공 시 메인 컨텐츠 표시
-        showMainContent();
+        const authForm2 = panelRoot.querySelector('#nm-auth-form');
+        const mainContent2 = panelRoot.querySelector('#nm-main-content');
+        if (authForm2) authForm2.style.display = 'none';
+        if (mainContent2) mainContent2.style.display = 'block';
       }
     } catch (error) {
       if (errorEl) {
@@ -266,11 +272,31 @@ async function ensurePanel() {
     loginSection.style.display = 'block';
   });
   
+  // 결제 버튼 이벤트
+  const paymentBtn = shadow.querySelector('#nm-payment-btn');
+  if (paymentBtn) {
+    console.log('결제 버튼 발견:', paymentBtn);
+    paymentBtn.addEventListener('click', async (e) => {
+      console.log('결제 버튼 클릭됨!', e);
+      // 금액 선택 모달 표시
+      showAmountModal();
+    });
+  } else {
+    console.error('결제 버튼을 찾을 수 없습니다!');
+  }
+  
   // 직접 입력 옵션 토글 이벤트
   setupCustomInputToggles(shadow);
 
   // 패널을 기본적으로 숨김 상태로 설정
   panelRoot.style.display = 'none';
+  
+  // 초기 상태: 로그인 폼만 표시, 메인 컨텐츠 숨김
+  const authForm = panelRoot.querySelector('#nm-auth-form');
+  const mainContent = panelRoot.querySelector('#nm-main-content');
+  if (authForm) authForm.style.display = 'block';
+  if (mainContent) mainContent.style.display = 'none';
+  
   return panelRoot;
 }
 
@@ -355,12 +381,22 @@ async function togglePanel(force) {
   
   if (isOpen) {
     // 패널이 열릴 때 로그인 상태 확인
-    if (accessToken) {
-      // 이미 로그인된 상태면 메인 컨텐츠 표시
-      const authForm = panelRoot.querySelector('#nm-auth-form');
-      const mainContent = panelRoot.querySelector('#nm-main-content');
-      if (authForm) authForm.style.display = 'none';
-      if (mainContent) mainContent.style.display = 'block';
+    if (accessToken && refreshToken) {
+      // 이미 로그인된 상태면 사용자 정보 가져와서 메인 컨텐츠 표시
+      try {
+        await loadUserInfo();
+        const authForm = panelRoot.querySelector('#nm-auth-form');
+        const mainContent = panelRoot.querySelector('#nm-main-content');
+        if (authForm) authForm.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
+      } catch (error) {
+        console.error('유저 정보 로드 실패:', error);
+        // 로그인 폼 표시
+        const authForm = panelRoot.querySelector('#nm-auth-form');
+        const mainContent = panelRoot.querySelector('#nm-main-content');
+        if (authForm) authForm.style.display = 'block';
+        if (mainContent) mainContent.style.display = 'none';
+      }
     } else {
       // 로그인되지 않은 상태면 로그인 폼 표시
       const authForm = panelRoot.querySelector('#nm-auth-form');
@@ -468,12 +504,11 @@ function getUserInputData() {
 }
 
 async function onSendClick() {
-  if (!sendBtn || !statusEl) return;
+  if (!sendBtn) return;
 
   // 인증 확인
   if (!await checkAuth()) {
-    statusEl.textContent = '로그인이 필요합니다.';
-    statusEl.classList.add('err');
+    showToast('로그인이 필요합니다.', 'error');
     return;
   }
 
@@ -496,10 +531,32 @@ async function onSendClick() {
     audience: userInput.audience
   };
 
+  // 원본 버튼 텍스트 저장
+  const originalBtnText = sendBtn.innerHTML;
+
   try {
+    // 버튼 비활성화 및 텍스트 변경
     sendBtn.classList.add('loading');
-    statusEl.textContent = '전송 중...';
-    statusEl.classList.remove('ok','err');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `
+      <svg width="16" height="16" style="animation: spin 1s linear infinite; margin-right: 8px;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="30 10" />
+      </svg>
+      <span>AI 분석 중...</span>
+    `;
+    
+    // 스피너 애니메이션 추가
+    if (!document.getElementById('btn-spinner-animation')) {
+      const style = document.createElement('style');
+      style.id = 'btn-spinner-animation';
+      style.textContent = `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     const res = await fetch(ADVISE_URL, {
       method: 'POST',
@@ -524,9 +581,8 @@ async function onSendClick() {
         });
         if (!retryRes.ok) throw new Error(`HTTP ${retryRes.status}`);
         const result = await retryRes.json();
-        showResponse(result.output, result.token);
-        statusEl.textContent = '완료';
-        statusEl.classList.add('ok');
+        showResponse(result.output, result.token, result.remainingTokens);
+        showToast('✓ AI 조언 완료!', 'success');
         return;
       } else {
         throw new Error('인증 실패');
@@ -540,13 +596,14 @@ async function onSendClick() {
     // 응답 표시
     showResponse(result.output, result.token, result.remainingTokens);
     
-    statusEl.textContent = '완료';
-    statusEl.classList.add('ok');
+    showToast('✓ AI 조언 완료!', 'success');
   } catch (e) {
-    statusEl.textContent = `실패: ${e.message || e}`;
-    statusEl.classList.add('err');
+    showToast(`실패: ${e.message || e}`, 'error');
   } finally {
+    // 버튼 복원
+    sendBtn.innerHTML = originalBtnText;
     sendBtn.classList.remove('loading');
+    sendBtn.disabled = false;
   }
 }
 
@@ -570,12 +627,434 @@ async function refreshAccessToken() {
   return false;
 }
 
+// 사용자 정보 로드
+async function loadUserInfo() {
+  if (!accessToken || !refreshToken) return;
+  
+  try {
+    // refresh API를 통해 최신 accessToken 받아오기
+    const refreshResponse = await fetch(`${AUTH_URL}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+    
+    if (!refreshResponse.ok) throw new Error('토큰 갱신 실패');
+    
+    const refreshData = await refreshResponse.json();
+    accessToken = refreshData.accessToken;
+    localStorage.setItem('accessToken', accessToken);
+    
+    // JWT에서 username 추출하여 토큰 잔액 조회
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const balanceResponse = await fetch(`${AUTH_URL}/token-balance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: payload.username })
+    });
+    
+    if (balanceResponse.ok) {
+      const balanceData = await balanceResponse.json();
+      tokenBalance = balanceData.tokenAmount || 0;
+      updateTokenBalance();
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('사용자 정보 로드 실패:', error);
+    throw error;
+  }
+}
+
+// 토큰 잔액 업데이트
+function updateTokenBalance() {
+  const tokenBalanceEl = shadow?.querySelector('#nm-token-balance');
+  if (tokenBalanceEl) {
+    tokenBalanceEl.textContent = `${tokenBalance.toLocaleString()}`;
+  }
+}
+
+// 금액 선택 모달 표시
+function showAmountModal() {
+  const amounts = [
+    { price: 3000, label: '3천원', tokens: '3,000 토큰', popular: false },
+    { price: 5000, label: '5천원', tokens: '5,000 토큰', popular: false },
+    { price: 10000, label: '1만원', tokens: '10,000 토큰', popular: true },
+    { price: 50000, label: '5만원', tokens: '50,000 토큰', popular: false },
+  ];
+  
+  // 인라인 스타일로 모달 생성 (CSS 로드 없이도 동작)
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+    backdrop-filter: blur(4px);
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  // CSS 애니메이션 추가
+  if (!document.getElementById('modal-animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'modal-animation-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  content.innerHTML = `
+    <h3 style="font-size: 20px; font-weight: 700; color: #191f28; margin: 0 0 24px 0; text-align: center;">💳 토큰 충전</h3>
+    ${amounts.map(a => `
+      <button class="payment-btn" data-price="${a.price}" style="
+        width: 100%;
+        padding: 16px 20px;
+        margin: 8px 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      ">
+        <div>
+          <div style="font-size: 18px; font-weight: 700;">${a.label}</div>
+          <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px;">${a.tokens}</div>
+        </div>
+        ${a.popular ? '<span style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 12px;">인기</span>' : ''}
+      </button>
+    `).join('')}
+    <button id="close-modal" style="
+      width: 100%;
+      padding: 14px 20px;
+      margin: 16px 0 0 0;
+      background: #f8f9fa;
+      color: #6c757d;
+      border: 1.5px solid #e9ecef;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+    ">취소</button>
+  `;
+  
+  modal.appendChild(content);
+  
+  // Shadow DOM 밖으로 모달 추가 (document.body에 직접 추가)
+  document.body.appendChild(modal);
+  
+  // 버튼 호버 효과 추가
+  content.querySelectorAll('.payment-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'translateY(-2px)';
+      btn.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.4)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translateY(0)';
+      btn.style.boxShadow = 'none';
+    });
+    btn.addEventListener('click', async () => {
+      const amount = parseInt(btn.dataset.price);
+      try {
+        document.body.removeChild(modal);
+      } catch (e) {
+        console.error('모달 제거 오류:', e);
+      }
+      await processPayment(amount);
+    });
+  });
+  
+  content.querySelector('#close-modal').addEventListener('click', () => {
+    try {
+      document.body.removeChild(modal);
+    } catch (e) {
+      console.error('모달 제거 오류:', e);
+    }
+  });
+  
+  // 모달 외부 클릭 시 닫기
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      try {
+        document.body.removeChild(modal);
+      } catch (e) {
+        console.error('모달 제거 오류:', e);
+      }
+    }
+  });
+  
+  console.log('모달 생성 완료:', modal);
+}
+
+async function processPayment(amount) {
+  if (!window.confirm(`${amount.toLocaleString()}원 (${amount.toLocaleString()} 토큰)을 충전하시겠습니까?`)) {
+    return;
+  }
+  
+  if (!accessToken) {
+    alert('로그인이 필요합니다.');
+    return;
+  }
+  
+  const loadingModal = showLoadingModal('결제 처리 중...');
+  
+  try {
+    const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const res = await fetch(`${PAYMENT_URL}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ orderId, amount }),
+    });
+    
+    if (document.body.contains(loadingModal)) {
+      document.body.removeChild(loadingModal);
+    }
+    
+    if (res.ok) {
+      const result = await res.json();
+      showSuccessModal(`${result.tokens.toLocaleString()} 토큰이 충전되었습니다!`);
+      tokenBalance += result.tokens;
+      updateTokenBalance();
+    } else {
+      const error = await res.json().catch(() => ({ message: '알 수 없는 오류' }));
+      alert(`결제 실패: ${error.message}`);
+    }
+  } catch (error) {
+    if (document.body.contains(loadingModal)) {
+      document.body.removeChild(loadingModal);
+    }
+    alert(`결제 중 오류가 발생했습니다`);
+  }
+}
+
+// 로딩 모달 표시
+function showLoadingModal(message) {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  `;
+  
+  content.innerHTML = `
+    <div style="
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    "></div>
+    <div style="font-size: 16px; font-weight: 600; color: #191f28;">${message}</div>
+  `;
+  
+  // 스피너 애니메이션 추가
+  if (!document.getElementById('spinner-animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'spinner-animation-styles';
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  return modal;
+}
+
+// 토스트 알림 표시
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 999999;
+    font-size: 15px;
+    font-weight: 600;
+    animation: slideInRight 0.3s ease-out;
+    max-width: 300px;
+  `;
+  
+  // 애니메이션 추가
+  if (!document.getElementById('toast-animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animation-styles';
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes slideOutRight {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  // 3초 후 자동 제거
+  setTimeout(() => {
+    toast.style.animation = 'slideOutRight 0.3s ease-out';
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 300);
+  }, 3000);
+}
+
+// 성공 모달 표시
+function showSuccessModal(message) {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+  `;
+  
+  content.innerHTML = `
+    <div style="
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: white;
+      font-size: 30px;
+    ">✓</div>
+    <div style="font-size: 18px; font-weight: 700; color: #191f28; margin-bottom: 12px;">충전 완료!</div>
+    <div style="font-size: 14px; color: #8b95a1; margin-bottom: 24px;">${message}</div>
+    <button onclick="this.closest('div[style*=\\'position: fixed\\']').remove()" style="
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    ">확인</button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // 3초 후 자동 닫기
+  setTimeout(() => {
+    if (document.body.contains(modal)) {
+      document.body.removeChild(modal);
+    }
+  }, 3000);
+}
+
 /* ===== 응답 표시 ===== */
 function showResponse(advice, tokenCount, remainingTokens) {
   if (!responseEl || !adviceContentEl || !tokenInfoEl) return;
   
   // 조언 내용 저장
   currentAdvice = advice;
+  
+  // 토큰 잔액 업데이트
+  tokenBalance = remainingTokens;
+  updateTokenBalance();
   
   // 상태 초기화 (새로운 조언이므로)
   isApplied = false;
@@ -614,18 +1093,8 @@ function onApplyClick() {
       applyBtn.textContent = '되돌리기';
       isApplied = true;
       
-      // 성공 메시지
-      if (statusEl) {
-        statusEl.textContent = '적용 완료!';
-        statusEl.classList.remove('ok', 'err');
-        statusEl.classList.add('ok');
-        
-        // 3초 후 메시지 초기화
-        setTimeout(() => {
-          statusEl.textContent = '';
-          statusEl.classList.remove('ok', 'err');
-        }, 3000);
-      }
+      // 토스트 알림
+      showToast('✓ 적용 완료!', 'success');
       
     } else {
       // 되돌리기
@@ -639,27 +1108,13 @@ function onApplyClick() {
       applyBtn.textContent = '적용';
       isApplied = false;
       
-      // 성공 메시지
-      if (statusEl) {
-        statusEl.textContent = '되돌리기 완료!';
-        statusEl.classList.remove('ok', 'err');
-        statusEl.classList.add('ok');
-        
-        // 3초 후 메시지 초기화
-        setTimeout(() => {
-          statusEl.textContent = '';
-          statusEl.classList.remove('ok', 'err');
-        }, 3000);
-      }
+      // 토스트 알림
+      showToast('↶ 되돌리기 완료!', 'success');
     }
     
   } catch (e) {
     console.error('적용/되돌리기 중 오류:', e);
-    if (statusEl) {
-      statusEl.textContent = `오류: ${e.message}`;
-      statusEl.classList.remove('ok', 'err');
-      statusEl.classList.add('err');
-    }
+    showToast(`오류: ${e.message}`, 'error');
   }
 }
 
