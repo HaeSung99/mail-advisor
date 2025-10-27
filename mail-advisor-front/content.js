@@ -535,28 +535,32 @@ async function onSendClick() {
   const originalBtnText = sendBtn.innerHTML;
 
   try {
-    // 버튼 비활성화 및 텍스트 변경
+    // 버튼 비활성화 및 텍스트 변경 (CSS 애니메이션 포함)
     sendBtn.classList.add('loading');
     sendBtn.disabled = true;
-    sendBtn.innerHTML = `
-      <svg width="16" height="16" style="animation: spin 1s linear infinite; margin-right: 8px;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="30 10" />
-      </svg>
-      <span>AI 분석 중...</span>
-    `;
     
-    // 스피너 애니메이션 추가
-    if (!document.getElementById('btn-spinner-animation')) {
+    // Shadow DOM 내부에 스타일 추가
+    if (!shadow.querySelector('#spinner-animation')) {
       const style = document.createElement('style');
-      style.id = 'btn-spinner-animation';
+      style.id = 'spinner-animation';
       style.textContent = `
-        @keyframes spin {
+        @keyframes spinner-rotate {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        .spinner {
+          animation: spinner-rotate 0.8s linear infinite;
+        }
       `;
-      document.head.appendChild(style);
+      shadow.appendChild(style);
     }
+    
+    sendBtn.innerHTML = `
+      <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="50 15" opacity="0.9" />
+      </svg>
+      <span>AI 분석 중...</span>
+    `;
 
     const res = await fetch(ADVISE_URL, {
       method: 'POST',
@@ -1178,8 +1182,11 @@ function showResponse(advice, tokenCount, remainingTokens) {
   responseEl.style.display = 'block';
   applyBtn.style.display = 'inline-block';
   
-  // 패널 높이 조정을 위해 스크롤
-  responseEl.scrollIntoView({ behavior: 'smooth' });
+  // 패널 콘텐츠를 맨 위로 스크롤
+  const panelContent = shadow?.querySelector('.nm-panel__content');
+  if (panelContent) {
+    panelContent.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 /* ===== 적용/되돌리기 버튼 클릭 ===== */
