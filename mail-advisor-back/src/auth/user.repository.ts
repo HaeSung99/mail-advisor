@@ -26,13 +26,20 @@ export class UsersRepository {
     return this.repo.increment({ username }, 'tokenAmount', amount);
   }
 
-  // 토큰 수 감소
+  // 토큰 수 감소 (원자적 연산으로 동시성 처리)
   async decreaseTokenAmount(username: string, amount: number) {
-    const user = await this.findByUsername(username);
-    if (!user) return null;
+    // GREATEST 함수로 0 미만으로 내려가지 않도록 보장
+    // 단일 쿼리로 처리하여 Race Condition 방지
+    const result = await this.repo
+      .createQueryBuilder()
+      .update(User)
+      .set({
+        tokenAmount: () => `GREATEST(0, tokenAmount - ${amount})`
+      })
+      .where('username = :username', { username })
+      .execute();
     
-    const newAmount = Math.max(0, (user.tokenAmount || 0) - amount);
-    return this.repo.update({ username }, { tokenAmount: newAmount });
+    return result;
   }
 
   // 리프레시 토큰 저장

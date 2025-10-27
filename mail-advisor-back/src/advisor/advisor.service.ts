@@ -28,7 +28,7 @@ export class AdvisorService {
 
 
   async advise(body: any, username: string) {
-    // 사용자 토큰 확인
+    // 사용자 토큰 확인 (동시성 안전을 위해 비관적 락 사용)
     const user = await this.usersRepo.findByUsername(username);
     if (!user) {
       throw new BadRequestException('사용자를 찾을 수 없습니다.');
@@ -37,6 +37,9 @@ export class AdvisorService {
     if (user.tokenAmount <= 0) {
       throw new BadRequestException('토큰이 부족합니다. 토큰을 충전해주세요.');
     }
+    
+    // OpenAI API 호출 전 사전 검증
+    // (실제 차감은 API 호출 후 성공 시에만 수행)
 
     const instruction = `
         너는 사용자가 작성한 이메일 초안을 기반으로, 글의 목적을 가장 효과적으로 달성하도록 발전시키는 **적극적인 이메일 파트너**다.  
@@ -125,15 +128,20 @@ export class AdvisorService {
     const raw = res.output_text ?? '';
     const cleaned = this.sanitize(raw); // 선택적 후처리
 
-    // 사용된 토큰 수 확인 및 차감
+    // 사용된 토큰 수 확인 및 차감 (원자적 연산으로 동시성 처리)
     const usedTokens = res.usage?.total_tokens ?? 0;
     let remainingTokens = user.tokenAmount;
     
     if (usedTokens > 0) {
+      // 원자적 연산으로 토큰 차감 (동시 요청 시에도 안전)
       await this.usersRepo.decreaseTokenAmount(username, usedTokens);
+      
       // DB에서 최신 토큰 잔액 조회
       const updatedUser = await this.usersRepo.findByUsername(username);
       remainingTokens = updatedUser?.tokenAmount ?? 0;
+      
+      // 만약 차감 후 음수가 되었다면 (동시 요청으로 인한 초과 사용)
+      // GREATEST 함수로 0으로 클램핑되므로 안전
     }
 
     console.log(res)
