@@ -677,10 +677,10 @@ function updateTokenBalance() {
 // 금액 선택 모달 표시
 function showAmountModal() {
   const amounts = [
-    { price: 3000, label: '3천원', tokens: '3,000 토큰', popular: false },
-    { price: 5000, label: '5천원', tokens: '5,000 토큰', popular: false },
-    { price: 10000, label: '1만원', tokens: '10,000 토큰', popular: true },
-    { price: 50000, label: '5만원', tokens: '50,000 토큰', popular: false },
+    { price: 3000, label: '3천원', tokens: '3,000', desc: '가볍게 시작', popular: false },
+    { price: 5000, label: '5천원', tokens: '5,000', desc: '적당한 선택', popular: false },
+    { price: 10000, label: '1만원', tokens: '10,000', desc: '추천', popular: true },
+    { price: 50000, label: '5만원', tokens: '50,000', desc: '넉넉하게', popular: false },
   ];
   
   // 인라인 스타일로 모달 생성 (CSS 로드 없이도 동작)
@@ -691,23 +691,24 @@ function showAmountModal() {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(15, 23, 42, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 999999;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   `;
   
   const content = document.createElement('div');
   content.style.cssText = `
-    background: white;
-    padding: 32px;
-    border-radius: 16px;
-    max-width: 400px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    padding: 40px 36px;
+    border-radius: 24px;
+    max-width: 420px;
     width: 90%;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
+    animation: slideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   `;
   
   // CSS 애니메이션 추가
@@ -718,7 +719,7 @@ function showAmountModal() {
       @keyframes slideIn {
         from {
           opacity: 0;
-          transform: translateY(-20px) scale(0.95);
+          transform: translateY(-30px) scale(0.92);
         }
         to {
           opacity: 1;
@@ -730,42 +731,116 @@ function showAmountModal() {
   }
   
   content.innerHTML = `
-    <h3 style="font-size: 20px; font-weight: 700; color: #191f28; margin: 0 0 24px 0; text-align: center;">💳 토큰 충전</h3>
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="
+        display: inline-block;
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+      ">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h3 style="
+        font-size: 24px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 8px 0;
+        letter-spacing: -0.5px;
+      ">토큰 충전</h3>
+      <p style="
+        font-size: 14px;
+        color: #64748b;
+        margin: 0;
+        font-weight: 500;
+      ">사용하실 토큰을 선택해주세요</p>
+    </div>
     ${amounts.map(a => `
       <button class="payment-btn" data-price="${a.price}" style="
         width: 100%;
-        padding: 16px 20px;
-        margin: 8px 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 12px 0;
+        background: ${a.popular ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#ffffff'};
+        color: ${a.popular ? '#ffffff' : '#1e293b'};
+        border: ${a.popular ? 'none' : '2px solid #e2e8f0'};
+        border-radius: 16px;
         cursor: pointer;
         font-size: 16px;
         font-weight: 600;
-        transition: all 0.2s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: ${a.popular ? '0 4px 12px rgba(16, 185, 129, 0.25)' : '0 2px 4px rgba(0, 0, 0, 0.04)'};
       ">
-        <div>
-          <div style="font-size: 18px; font-weight: 700;">${a.label}</div>
-          <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px;">${a.tokens}</div>
+        <div style="text-align: left; z-index: 1; flex: 1;">
+          <div style="
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          ">
+            ${a.label}
+            ${a.popular ? `
+              <span style="
+                background: rgba(255, 255, 255, 0.25);
+                backdrop-filter: blur(8px);
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 700;
+                color: white;
+                letter-spacing: 0.5px;
+              ">BEST</span>
+            ` : ''}
+          </div>
+          <div style="
+            font-size: 13px;
+            color: ${a.popular ? 'rgba(255, 255, 255, 0.85)' : '#64748b'};
+            font-weight: 500;
+          ">${a.desc}</div>
         </div>
-        ${a.popular ? '<span style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 12px;">인기</span>' : ''}
+        <div style="text-align: right; z-index: 1;">
+          <div style="
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+          ">${a.tokens}</div>
+          <div style="
+            font-size: 12px;
+            color: ${a.popular ? 'rgba(255, 255, 255, 0.75)' : '#94a3b8'};
+            font-weight: 600;
+            margin-top: 2px;
+          ">토큰</div>
+        </div>
       </button>
     `).join('')}
     <button id="close-modal" style="
       width: 100%;
-      padding: 14px 20px;
-      margin: 16px 0 0 0;
-      background: #f8f9fa;
-      color: #6c757d;
-      border: 1.5px solid #e9ecef;
+      padding: 16px 24px;
+      margin: 20px 0 0 0;
+      background: transparent;
+      color: #64748b;
+      border: none;
       border-radius: 12px;
       cursor: pointer;
       font-size: 15px;
       font-weight: 600;
+      transition: all 0.2s;
     ">취소</button>
   `;
   
@@ -775,27 +850,49 @@ function showAmountModal() {
   document.body.appendChild(modal);
   
   // 버튼 호버 효과 추가
-  content.querySelectorAll('.payment-btn').forEach(btn => {
+  content.querySelectorAll('.payment-btn').forEach((btn, index) => {
+    const isPopular = amounts[index].popular;
+    
     btn.addEventListener('mouseenter', () => {
-      btn.style.transform = 'translateY(-2px)';
-      btn.style.boxShadow = '0 8px 20px rgba(102, 126, 234, 0.4)';
+      if (isPopular) {
+        btn.style.transform = 'translateY(-4px) scale(1.02)';
+        btn.style.boxShadow = '0 12px 24px rgba(16, 185, 129, 0.35)';
+      } else {
+        btn.style.transform = 'translateY(-3px)';
+        btn.style.background = '#f8fafc';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.08)';
+      }
     });
+    
     btn.addEventListener('mouseleave', () => {
-      btn.style.transform = 'translateY(0)';
-      btn.style.boxShadow = 'none';
+      btn.style.transform = 'translateY(0) scale(1)';
+      if (isPopular) {
+        btn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)';
+      } else {
+        btn.style.background = '#ffffff';
+        btn.style.borderColor = '#e2e8f0';
+        btn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.04)';
+      }
     });
+    
     btn.addEventListener('click', async () => {
       const amount = parseInt(btn.dataset.price);
-      try {
-        document.body.removeChild(modal);
-      } catch (e) {
-        console.error('모달 제거 오류:', e);
-      }
-      await processPayment(amount);
+      const confirmed = await processPayment(amount, modal);
+      // processPayment 내부에서 모달을 닫을지 결정
     });
   });
   
-  content.querySelector('#close-modal').addEventListener('click', () => {
+  const closeBtn = content.querySelector('#close-modal');
+  closeBtn.addEventListener('mouseenter', () => {
+    closeBtn.style.background = '#f1f5f9';
+    closeBtn.style.color = '#475569';
+  });
+  closeBtn.addEventListener('mouseleave', () => {
+    closeBtn.style.background = 'transparent';
+    closeBtn.style.color = '#64748b';
+  });
+  closeBtn.addEventListener('click', () => {
     try {
       document.body.removeChild(modal);
     } catch (e) {
@@ -817,14 +914,24 @@ function showAmountModal() {
   console.log('모달 생성 완료:', modal);
 }
 
-async function processPayment(amount) {
+async function processPayment(amount, paymentModal) {
   if (!window.confirm(`${amount.toLocaleString()}원 (${amount.toLocaleString()} 토큰)을 충전하시겠습니까?`)) {
-    return;
+    // 취소를 누르면 모달은 그대로 유지
+    return false;
+  }
+  
+  // 확인을 눌렀을 때만 결제 모달 닫기
+  if (paymentModal && document.body.contains(paymentModal)) {
+    try {
+      document.body.removeChild(paymentModal);
+    } catch (e) {
+      console.error('모달 제거 오류:', e);
+    }
   }
   
   if (!accessToken) {
     alert('로그인이 필요합니다.');
-    return;
+    return false;
   }
   
   const loadingModal = showLoadingModal('결제 처리 중...');
@@ -849,15 +956,18 @@ async function processPayment(amount) {
       showSuccessModal(`${result.tokens.toLocaleString()} 토큰이 충전되었습니다!`);
       tokenBalance += result.tokens;
       updateTokenBalance();
+      return true;
     } else {
       const error = await res.json().catch(() => ({ message: '알 수 없는 오류' }));
       alert(`결제 실패: ${error.message}`);
+      return false;
     }
   } catch (error) {
     if (document.body.contains(loadingModal)) {
       document.body.removeChild(loadingModal);
     }
     alert(`결제 중 오류가 발생했습니다`);
+    return false;
   }
 }
 
