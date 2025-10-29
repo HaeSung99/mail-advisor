@@ -147,6 +147,9 @@ docker-compose up -d --build
 - 업무: 예) "마케팅"
 ```
 
+![메일 어드바이저 초기 화면](./docs/images/screenshot-01-initial.png)
+*초기 화면 - 프로필 설정 및 토큰 잔액 확인*
+
 이 설정은 언제든 변경 가능합니다.
 
 #### 3.2 메일 초안 작성
@@ -176,6 +179,9 @@ docker-compose up -d --build
 4. "245 토큰 사용 (남은 토큰: 9755)" 확인
 ```
 
+![AI 메일 재작성 결과](./docs/images/screenshot-02-ai-result.png)
+*AI 재작성 결과 - 실시간 메일 분석 및 전문적 재작성 예시*
+
 #### 3.5 결과 적용
 ```
 방법 1: 직접 복사
@@ -202,6 +208,9 @@ docker-compose up -d --build
 5. "충전 완료!" 알림 확인
 6. 토큰 잔액 업데이트 확인
 ```
+
+![토큰 충전 모달](./docs/images/screenshot-03-payment.png)
+*토큰 충전 화면 - 다양한 패키지 옵션 선택*
 
 ### 5. 고급 사용법
 
